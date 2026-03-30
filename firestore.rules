@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Kullanıcı sadece kendi profilini okuyabilir ve yazabilir
+      allow read, write: if isOwner(userId);
+    }
+    
+    // Transactions collection
+    match /transactions/{transactionId} {
+      // Sadece kendi transaction'larını görebilir
+      allow read: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      
+      // Yeni transaction oluştururken userId kontrolü
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // Sadece kendi transaction'larını güncelleyebilir
+      allow update: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == request.auth.uid;
+      
+      // Sadece kendi transaction'larını silebilir
+      allow delete: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // Investments collection
+    match /investments/{investmentId} {
+      // Sadece kendi investment'larını görebilir
+      allow read: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+      
+      // Yeni investment oluştururken userId kontrolü
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+      
+      // Sadece kendi investment'larını güncelleyebilir
+      allow update: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == request.auth.uid;
+      
+      // Sadece kendi investment'larını silebilir
+      allow delete: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // Budgets collection
+    match /budgets/{budgetId} {
+      allow read, write: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // AI Chat History (opsiyonel)
+    match /chatHistory/{chatId} {
+      allow read, write: if isAuthenticated() && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // Diğer tüm collection'lar için erişimi engelle
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
