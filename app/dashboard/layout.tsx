@@ -1,10 +1,48 @@
+"use client"
+
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/dashboard/sidebar"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const { user, loading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    // Auth durumu yüklenince ve kullanıcı yoksa login'e yönlendir
+    if (!loading && !user) {
+      router.replace("/login")
+    }
+  }, [user, loading, router])
+
+  // Yükleniyor ekranı
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[oklch(0.12_0.01_250)]">
+        {/* Spinner */}
+        <div className="relative">
+          <div className="w-16 h-16 rounded-full border-4 border-[oklch(0.28_0.02_250)] border-t-[oklch(0.7_0.2_220)] animate-spin" />
+          <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-b-[oklch(0.6_0.15_280/0.4)] animate-spin" style={{ animationDirection: "reverse", animationDuration: "1.5s" }} />
+        </div>
+        {/* Logo & Metin */}
+        <div className="text-center">
+          <p className="text-lg font-semibold metallic-text">FinanceAI</p>
+          <p className="text-sm text-muted-foreground mt-1 animate-pulse">Hesabınız doğrulanıyor...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Kullanıcı yoksa (yönlendirme useEffect'te yapılıyor) boş döndür
+  if (!user) {
+    return null
+  }
+
   return (
     <div className="min-h-screen relative">
       {/* Futuristic background effects */}

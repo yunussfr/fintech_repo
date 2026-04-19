@@ -1,3 +1,5 @@
+"use client"
+
 import { StatsCard } from "@/components/dashboard/stats-card"
 import { PortfolioChart } from "@/components/dashboard/portfolio-chart"
 import { SpendingChart } from "@/components/dashboard/spending-chart"
@@ -5,13 +7,19 @@ import { AIChat } from "@/components/dashboard/ai-chat"
 import { InvestmentList } from "@/components/dashboard/investment-list"
 import { RecentTransactions } from "@/components/dashboard/recent-transactions"
 import { Wallet, TrendingUp, ArrowUpDown, PiggyBank } from "lucide-react"
+import { useAuth } from "@/hooks/useAuth"
 
 export default function DashboardPage() {
+  const { user } = useAuth()
+
+  // displayName varsa kullan, yoksa e-postanın @ öncesi kısmı
+  const displayName = user?.displayName || user?.email?.split("@")[0] || "Kullanıcı"
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="relative">
-        <h1 className="text-2xl font-bold metallic-text">Hoş Geldiniz, Ahmet</h1>
+        <h1 className="text-2xl font-bold metallic-text">Hoş Geldiniz, {displayName} 👋</h1>
         <p className="text-muted-foreground mt-1">Finansal durumunuzun özeti</p>
       </div>
 
