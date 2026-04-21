@@ -3,15 +3,16 @@
 import { GlassCard } from "./glass-card"
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine } from "recharts"
 import { AlertTriangle } from "lucide-react"
+import { useLanguage } from "@/lib/i18n/LanguageContext"
 
-const data = [
-  { day: "Mon", spending: 120 },
-  { day: "Tue", spending: 280 },
-  { day: "Wed", spending: 450 },
-  { day: "Thu", spending: 180 },
-  { day: "Fri", spending: 520 },
-  { day: "Sat", spending: 680 },
-  { day: "Sun", spending: 340 },
+const rawData = [
+  { dayKey: "days.mon", spending: 120 },
+  { dayKey: "days.tue", spending: 280 },
+  { dayKey: "days.wed", spending: 450 },
+  { dayKey: "days.thu", spending: 180 },
+  { dayKey: "days.fri", spending: 520 },
+  { dayKey: "days.sat", spending: 680 },
+  { dayKey: "days.sun", spending: 340 },
 ]
 
 const BUDGET_LIMIT = 400
@@ -25,7 +26,7 @@ interface CustomTooltipProps {
   label?: string
 }
 
-function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+function CustomTooltip({ active, payload, label, overByLabel }: CustomTooltipProps & { overByLabel?: string }) {
   if (active && payload && payload.length) {
     const value = payload[0].value
     const isOverBudget = value > BUDGET_LIMIT
@@ -40,11 +41,11 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
         <p className={`text-lg font-semibold ${
           isOverBudget ? "text-[oklch(0.7_0.22_25)]" : "metallic-text"
         }`}>
-          ${value}
+          {value} ₺
         </p>
         {isOverBudget && (
           <p className="text-xs text-[oklch(0.7_0.22_25)] mt-1">
-            Over budget by ${value - BUDGET_LIMIT}
+            {overByLabel}: {value - BUDGET_LIMIT} ₺
           </p>
         )}
       </div>
@@ -54,6 +55,9 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 }
 
 export function SpendingChart() {
+  const { t } = useLanguage()
+  // Günleri dile göre çevir
+  const data = rawData.map(d => ({ day: t(d.dayKey), spending: d.spending }))
   const maxSpending = Math.max(...data.map(d => d.spending))
   const hasOverspending = maxSpending > BUDGET_LIMIT
 
@@ -61,16 +65,16 @@ export function SpendingChart() {
     <GlassCard variant={hasOverspending ? "warning" : "default"}>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold metallic-text">Weekly Spending</h3>
+          <h3 className="text-lg font-semibold metallic-text">{t("spending.title")}</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Daily budget: ${BUDGET_LIMIT}
+            {t("spending.dailyBudget")}: {BUDGET_LIMIT} ₺
           </p>
         </div>
         {hasOverspending && (
           <div className="px-3 py-1.5 rounded-full bg-[oklch(0.7_0.22_25/0.15)] border border-[oklch(0.7_0.22_25/0.4)] backdrop-blur-sm flex items-center gap-2">
             <AlertTriangle className="w-3.5 h-3.5 text-[oklch(0.7_0.22_25)]" />
             <span className="text-xs font-medium text-[oklch(0.7_0.22_25)]">
-              Budget Exceeded
+              {t("spending.exceeded")}
             </span>
           </div>
         )}
@@ -119,7 +123,7 @@ export function SpendingChart() {
               strokeOpacity={0.7}
               strokeWidth={2}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip overByLabel={t("spending.overBy")} />} />
             <Area
               type="monotone"
               dataKey="spending"

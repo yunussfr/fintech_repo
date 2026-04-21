@@ -1,83 +1,140 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { GlassCard } from "./glass-card"
-import { ArrowUpRight, ArrowDownLeft, Coffee, ShoppingBag, Utensils, Fuel, Zap } from "lucide-react"
+import { ArrowUpRight, ArrowDownLeft, Coffee, ShoppingBag, Utensils, Fuel, Zap, Home, Car, Heart, GraduationCap, Gamepad2, Plane, CreditCard } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { type Transaction } from "@/lib/firestore"
+import { useAuth } from "@/hooks/useAuth"
+import { collection, query, where, orderBy, limit, onSnapshot } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
-const transactions = [
-  {
-    id: 1,
-    name: "Salary Deposit",
-    category: "Income",
-    amount: 5200,
-    type: "income",
-    date: "Today, 9:30 AM",
-    icon: ArrowDownLeft,
-  },
-  {
-    id: 2,
-    name: "Starbucks",
-    category: "Food & Drinks",
-    amount: -8.50,
-    type: "expense",
-    date: "Today, 11:15 AM",
-    icon: Coffee,
-  },
-  {
-    id: 3,
-    name: "Amazon Purchase",
-    category: "Shopping",
-    amount: -156.99,
-    type: "expense",
-    date: "Yesterday, 3:45 PM",
-    icon: ShoppingBag,
-  },
-  {
-    id: 4,
-    name: "Restaurant",
-    category: "Dining",
-    amount: -72.30,
-    type: "expense",
-    date: "Yesterday, 8:20 PM",
-    icon: Utensils,
-  },
-  {
-    id: 5,
-    name: "Gas Station",
-    category: "Transportation",
-    amount: -45.00,
-    type: "expense",
-    date: "Mar 28, 2:10 PM",
-    icon: Fuel,
-  },
-  {
-    id: 6,
-    name: "Electricity Bill",
-    category: "Utilities",
-    amount: -128.40,
-    type: "expense",
-    date: "Mar 27, 10:00 AM",
-    icon: Zap,
-  },
-]
+// Kategori ikonları
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  housing: Home,
+  transport: Car,
+  food: Utensils,
+  health: Heart,
+  education: GraduationCap,
+  entertainment: Gamepad2,
+  shopping: ShoppingBag,
+  bills: Zap,
+  travel: Plane,
+  fuel: Fuel,
+  coffee: Coffee,
+}
+
+// Kategori isimleri
+const CATEGORY_NAMES: Record<string, string> = {
+  housing: "Konut",
+  transport: "Ulaşım",
+  food: "Yiyecek",
+  health: "Sağlık",
+  education: "Eğitim",
+  entertainment: "Eğlence",
+  shopping: "Alışveriş",
+  bills: "Faturalar",
+  travel: "Seyahat",
+}
 
 export function RecentTransactions() {
+  const { user } = useAuth()
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!user) return
+
+    setLoading(true)
+
+    // Realtime listener - işlem eklenince otomatik güncellenir
+    const q = query(
+      collection(db, 'transactions'),
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(6)
+    )
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedTransactions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        date: doc.data().date?.toDate(),
+        createdAt: doc.data().createdAt?.toDate(),
+      })) as Transaction[]
+
+      setTransactions(fetchedTransactions)
+      setLoading(false)
+    }, (error) => {
+      console.error("İşlemler yüklenemedi:", error)
+      setLoading(false)
+    })
+
+    // Cleanup - component unmount olduğunda listener'ı kapat
+    return () => unsubscribe()
+  }, [user])
+
+  if (loading) {
+    return (
+      <GlassCard>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-semibold metallic-text">Son İşlemler</h3>
+            <p className="text-sm text-muted-foreground mt-1">En son aktiviteleriniz</p>
+          </div>
+        </div>
+        <div className="text-center py-8 text-muted-foreground text-sm animate-pulse">
+          Yükleniyor...
+        </div>
+      </GlassCard>
+    )
+  }
+
+  if (transactions.length === 0) {
+    return (
+      <GlassCard>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-semibold metallic-text">Son İşlemler</h3>
+            <p className="text-sm text-muted-foreground mt-1">En son aktiviteleriniz</p>
+          </div>
+        </div>
+        <div className="text-center py-8 text-muted-foreground text-sm">
+          Henüz işlem yok
+        </div>
+      </GlassCard>
+    )
+  }
+
   return (
     <GlassCard>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold metallic-text">Recent Transactions</h3>
-          <p className="text-sm text-muted-foreground mt-1">Your latest activity</p>
+          <h3 className="text-lg font-semibold metallic-text">Son İşlemler</h3>
+          <p className="text-sm text-muted-foreground mt-1">En son aktiviteleriniz</p>
         </div>
-        <button className="text-xs px-3 py-1.5 rounded-lg bg-[oklch(0.7_0.2_220/0.15)] text-[oklch(0.7_0.2_220)] hover:bg-[oklch(0.7_0.2_220/0.25)] transition-all duration-300 border border-[oklch(0.7_0.2_220/0.3)] backdrop-blur-sm">
-          See All
-        </button>
+        <a 
+          href="/dashboard/transactions"
+          className="text-xs px-3 py-1.5 rounded-lg bg-[oklch(0.7_0.2_220/0.15)] text-[oklch(0.7_0.2_220)] hover:bg-[oklch(0.7_0.2_220/0.25)] transition-all duration-300 border border-[oklch(0.7_0.2_220/0.3)] backdrop-blur-sm"
+        >
+          Tümünü Gör
+        </a>
       </div>
 
       <div className="space-y-2">
         {transactions.map((transaction) => {
-          const Icon = transaction.icon
-          const isIncome = transaction.type === "income"
+          const Icon = CATEGORY_ICONS[transaction.category] || CreditCard
+          const isIncome = transaction.amount > 0
+          const date = transaction.date instanceof Date 
+            ? transaction.date 
+            : (transaction.date as any)?.toDate?.() ?? new Date()
+          
+          const dateStr = date.toLocaleDateString("tr-TR", { 
+            day: "numeric", 
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit"
+          })
 
           return (
             <div
@@ -100,12 +157,14 @@ export function RecentTransactions() {
                     "font-semibold",
                     isIncome ? "text-[oklch(0.6_0.18_160)] neon-green-glow" : "text-foreground"
                   )}>
-                    {isIncome ? "+" : ""}{transaction.amount < 0 ? "-" : ""}${Math.abs(transaction.amount).toFixed(2)}
+                    {isIncome ? "+" : "-"}₺{Math.abs(transaction.amount).toLocaleString("tr-TR")}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mt-0.5">
-                  <span className="text-xs text-muted-foreground">{transaction.category}</span>
-                  <span className="text-xs text-muted-foreground">{transaction.date}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {CATEGORY_NAMES[transaction.category] || transaction.category}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{dateStr}</span>
                 </div>
               </div>
             </div>

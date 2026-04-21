@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { ArrowRightLeft, TrendingUp, TrendingDown, RefreshCw, Star, Clock, ChevronDown } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
+import { ArrowRightLeft, TrendingUp, TrendingDown, RefreshCw, Star, Clock, ChevronDown, Sparkles, Bot } from "lucide-react"
 import { GlassCard } from "@/components/dashboard/glass-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -49,27 +49,59 @@ const recentConversions = [
   { from: "GBP", to: "TRY", amount: 250, result: 10172.78, time: "1 saat once" },
 ]
 
+// Kur bazlı AI strateji önerileri
+const getAIStrategy = (from: string, to: string, rate: number, change: number): string => {
+  const pair = `${from}/${to}`
+  if (to === "TRY") {
+    if (change > 1.5)  return `${pair} paritesi son 24 saatte %${change.toFixed(1)} yükseliş gösterdi. Döviz alımı için bek lemek, kur normalleştikten sonra daha avantajlı olabilir.`
+    if (change < -1)   return `${pair} düşüş eğiliminde. Kısa vadeli TRY pozisyonu değerlendirilebilir.`
+    return `${pair} stabil bir seyir izliyor (${rate.toFixed(4)} TRY). Uzun vadeli portföy için iyi bir giriş noktası olabilir.`
+  }
+  if (from === "USD" && to === "EUR") return `Dolar/Euro paritesi dar bant içinde işlem görüyor. ECB ve Fed kararına kadar bekleme stratejisi önerilir.`
+  return `${pair} analizi: Hedef kur ${(rate * 1.01).toFixed(4)} seviyesine ulaşa bilir. Pozisyon büyüklüğünüç için dikkatli olunuz.`
+}
+
 export default function CurrencyPage() {
   const [fromCurrency, setFromCurrency] = useState(currencies[0])
-  const [toCurrency, setToCurrency] = useState(currencies[3])
-  const [amount, setAmount] = useState("1000")
-  const [result, setResult] = useState("0")
+  const [toCurrency, setToCurrency]     = useState(currencies[3])
+  const [amount, setAmount]             = useState("1000")
+  const [result, setResult]             = useState("0")
   const [showFromDropdown, setShowFromDropdown] = useState(false)
-  const [showToDropdown, setShowToDropdown] = useState(false)
-  const [isConverting, setIsConverting] = useState(false)
-  const [favorites, setFavorites] = useState<string[]>(["USD-TRY", "EUR-TRY"])
+  const [showToDropdown,   setShowToDropdown]   = useState(false)
+  const [isConverting, setIsConverting]         = useState(false)
+  const [favorites,    setFavorites]            = useState<string[]>(["USD-TRY", "EUR-TRY"])
+  const [aiLoading,    setAiLoading]            = useState(false)
+  const [aiText,       setAiText]               = useState("")
+
+  const rate = (exchangeRates[toCurrency.code] / exchangeRates[fromCurrency.code])
 
   const convert = (value: string, from: string, to: string) => {
     const numValue = parseFloat(value) || 0
     const fromRate = exchangeRates[from]
-    const toRate = exchangeRates[to]
+    const toRate   = exchangeRates[to]
     const converted = (numValue / fromRate) * toRate
     return converted.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   }
 
+  const refreshAI = useCallback(() => {
+    setAiLoading(true)
+    setAiText("")
+    const pairChange = popularPairs.find(
+      p => p.from === fromCurrency.code && p.to === toCurrency.code
+    )?.change ?? 0.5
+    setTimeout(() => {
+      setAiText(getAIStrategy(fromCurrency.code, toCurrency.code, rate, pairChange))
+      setAiLoading(false)
+    }, 800) // simulated latency
+  }, [fromCurrency, toCurrency, rate])
+
   useEffect(() => {
     setResult(convert(amount, fromCurrency.code, toCurrency.code))
   }, [amount, fromCurrency, toCurrency])
+
+  useEffect(() => {
+    refreshAI()
+  }, [fromCurrency.code, toCurrency.code])
 
   const swapCurrencies = () => {
     setIsConverting(true)
@@ -86,8 +118,6 @@ export default function CurrencyPage() {
       prev.includes(pair) ? prev.filter(p => p !== pair) : [...prev, pair]
     )
   }
-
-  const rate = (exchangeRates[toCurrency.code] / exchangeRates[fromCurrency.code])
 
   return (
     <div className="space-y-6">
@@ -345,18 +375,40 @@ export default function CurrencyPage() {
             </div>
           </GlassCard>
 
-          {/* AI Tip */}
+          {/* AI Strateji Paneli */}
           <GlassCard className="p-6 border-primary/30" glow>
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                <span className="text-lg">🤖</span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">AI Strateji Analizi</h3>
+                  <p className="text-xs text-muted-foreground">{fromCurrency.code}/{toCurrency.code} paritesi</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold mb-1">AI Oneri</h3>
-                <p className="text-sm text-muted-foreground">
-                  TRY/USD paritesi son 24 saatte %2.3 yukseldi. Doviz alimi icin beklemek mantikli olabilir.
-                </p>
+              <button
+                onClick={refreshAI}
+                disabled={aiLoading}
+                className="w-7 h-7 rounded-lg bg-secondary/50 hover:bg-secondary flex items-center justify-center transition-colors"
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5 text-muted-foreground", aiLoading && "animate-spin")} />
+              </button>
+            </div>
+
+            {aiLoading ? (
+              <div className="space-y-2">
+                <div className="h-3 bg-secondary/50 rounded animate-pulse w-full" />
+                <div className="h-3 bg-secondary/50 rounded animate-pulse w-4/5" />
+                <div className="h-3 bg-secondary/50 rounded animate-pulse w-3/5" />
               </div>
+            ) : (
+              <p className="text-sm text-muted-foreground leading-relaxed">{aiText}</p>
+            )}
+
+            <div className="mt-4 pt-3 border-t border-border/30 flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3 text-primary" />
+              <span className="text-xs text-muted-foreground">Simüle edilmiş analiz · Yatırım tavsiyesi değildir</span>
             </div>
           </GlassCard>
         </div>

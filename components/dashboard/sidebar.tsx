@@ -6,23 +6,17 @@ import {
   LayoutDashboard, ArrowLeftRight, Receipt, Target,
   Settings, LogOut, ChevronLeft, ChevronRight,
   PieChart, Bell, HelpCircle, X, Mail, Smartphone,
-  BookOpen, MessageSquare, LifeBuoy, CheckCircle2
+  BookOpen, MessageSquare, LifeBuoy, CheckCircle2, Landmark
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
+import { useLanguage } from "@/lib/i18n/LanguageContext"
 import { useAuth } from "@/hooks/useAuth"
 import { useRouter } from "next/navigation"
 
-const mainNavItems = [
-  { href: "/dashboard",              label: "Ana Sayfa",      icon: LayoutDashboard },
-  { href: "/dashboard/currency",     label: "Döviz Çevirici", icon: ArrowLeftRight },
-  { href: "/dashboard/transactions", label: "İşlemler",       icon: Receipt },
-  { href: "/dashboard/budget",       label: "Bütçe",          icon: Target },
-  { href: "/dashboard/analytics",    label: "Analitik",       icon: PieChart },
-]
-
+// navItems artık dinamik — useLanguage() içinde oluşturuluyor
 const bottomNavItems = [
-  { href: "/dashboard/settings", label: "Ayarlar", icon: Settings },
+  { href: "/dashboard/settings", labelKey: "nav.settings", icon: Settings },
 ]
 
 // Mock bildirimler
@@ -46,11 +40,21 @@ export function Sidebar() {
   const pathname = usePathname()
   const router   = useRouter()
   const { user, signOut } = useAuth()
+  const { t } = useLanguage()
 
   const [isCollapsed,   setIsCollapsed]   = useState(false)
   const [isSigningOut,  setIsSigningOut]  = useState(false)
   const [activePanel,   setActivePanel]   = useState<PanelType>(null)
   const [notifications, setNotifications] = useState(mockNotifications)
+
+  const mainNavItems = [
+    { href: "/dashboard",              labelKey: "nav.home",         icon: LayoutDashboard },
+    { href: "/dashboard/currency",     labelKey: "nav.currency",     icon: ArrowLeftRight },
+    { href: "/dashboard/transactions", labelKey: "nav.transactions", icon: Receipt },
+    { href: "/dashboard/budget",       labelKey: "nav.budget",       icon: Target },
+    { href: "/dashboard/assets",       labelKey: "nav.assets",       icon: Landmark },
+    { href: "/dashboard/analytics",    labelKey: "nav.analytics",    icon: PieChart },
+  ]
 
   const handleSignOut = async () => {
     setIsSigningOut(true)
@@ -123,7 +127,7 @@ export function Sidebar() {
                   )}>
                     <Icon className="w-5 h-5" />
                   </div>
-                  {!isCollapsed && <span className="font-medium relative z-10">{item.label}</span>}
+                  {!isCollapsed && <span className="font-medium relative z-10">{t(item.labelKey)}</span>}
                   {isActive && !isCollapsed && (
                     <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shadow-lg shadow-primary/50 relative z-10" />
                   )}
@@ -154,7 +158,7 @@ export function Sidebar() {
                   )}>
                     <Icon className="w-5 h-5" />
                   </div>
-                  {!isCollapsed && <span className="font-medium">{item.label}</span>}
+                  {!isCollapsed && <span className="font-medium">{t(item.labelKey)}</span>}
                 </Link>
               )
             })}
@@ -177,7 +181,7 @@ export function Sidebar() {
                   </span>
                 )}
               </div>
-              {!isCollapsed && <span className="font-medium">Bildirimler</span>}
+              {!isCollapsed && <span className="font-medium">{t("nav.notifications")}</span>}
             </button>
 
             {/* Yardım butonu — panel açar */}
@@ -193,7 +197,7 @@ export function Sidebar() {
               <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-secondary/50 group-hover:bg-secondary transition-colors">
                 <HelpCircle className="w-5 h-5" />
               </div>
-              {!isCollapsed && <span className="font-medium">Yardım</span>}
+              {!isCollapsed && <span className="font-medium">{t("nav.help")}</span>}
             </button>
 
             {/* Çıkış */}
@@ -207,7 +211,7 @@ export function Sidebar() {
                   ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
                   : <LogOut className="w-5 h-5" />}
               </div>
-              {!isCollapsed && <span className="font-medium">{isSigningOut ? "Çıkılıyor..." : "Çıkış Yap"}</span>}
+              {!isCollapsed && <span className="font-medium">{isSigningOut ? t("nav.loggingOut") : t("nav.logout")}</span>}
             </button>
           </div>
 

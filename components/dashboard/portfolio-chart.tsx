@@ -5,20 +5,22 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "rec
 import { TrendingUp, TrendingDown } from "lucide-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/lib/i18n/LanguageContext"
 
-const data = [
-  { month: "Jan", value: 42000 },
-  { month: "Feb", value: 45200 },
-  { month: "Mar", value: 48500 },
-  { month: "Apr", value: 52100 },
-  { month: "May", value: 49800 },
-  { month: "Jun", value: 54300 },
-  { month: "Jul", value: 58700 },
-  { month: "Aug", value: 62100 },
-  { month: "Sep", value: 59400 },
-  { month: "Oct", value: 65800 },
-  { month: "Nov", value: 71200 },
-  { month: "Dec", value: 78500 },
+// Aylar i18n key olarak tutulur, bileşen içinde çevrilir
+const rawData = [
+  { monthKey: "months.jan", value: 42000 },
+  { monthKey: "months.feb", value: 45200 },
+  { monthKey: "months.mar", value: 48500 },
+  { monthKey: "months.apr", value: 52100 },
+  { monthKey: "months.may", value: 49800 },
+  { monthKey: "months.jun", value: 54300 },
+  { monthKey: "months.jul", value: 58700 },
+  { monthKey: "months.aug", value: 62100 },
+  { monthKey: "months.sep", value: 59400 },
+  { monthKey: "months.oct", value: 65800 },
+  { monthKey: "months.nov", value: 71200 },
+  { monthKey: "months.dec", value: 78500 },
 ]
 
 const periods = ["1W", "1M", "3M", "6M", "1Y", "ALL"]
@@ -85,14 +87,16 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 
 export function PortfolioChart() {
   const [activePeriod, setActivePeriod] = useState("1Y")
+  const { t } = useLanguage()
+  const data = rawData.map(d => ({ month: t(d.monthKey), value: d.value }))
 
   return (
     <GlassCard className="h-full">
       {/* Başlık + Periyot */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold metallic-text">Portföy Performansı</h3>
-          <p className="text-sm text-muted-foreground mt-1">Yatırım büyümeni takip et</p>
+          <h3 className="text-lg font-semibold metallic-text">{t("portfolio.title")}</h3>
+          <p className="text-sm text-muted-foreground mt-1">{t("portfolio.subtitle")}</p>
         </div>
         <div className="flex gap-1 p-1 rounded-lg bg-[oklch(0.15_0.01_250)] border border-[oklch(0.28_0.02_250)]">
           {periods.map((period) => (
@@ -165,7 +169,7 @@ export function PortfolioChart() {
       {/* Toplam büyüme */}
       <div className="mt-4 pb-4 border-b border-[oklch(0.28_0.02_250)]">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Toplam Büyüme</span>
+          <span className="text-muted-foreground">{t("portfolio.totalGrowth")}</span>
           <span className="text-[oklch(0.7_0.2_220)] font-semibold flex items-center gap-1 neon-blue-glow">
             <TrendingUp className="w-4 h-4" />
             +86.9%
@@ -176,8 +180,8 @@ export function PortfolioChart() {
       {/* ── Yatırım Varlıkları ── */}
       <div className="mt-5">
         <div className="flex items-center justify-between mb-4">
-          <h4 className="text-sm font-semibold text-foreground/80">Yatırım Varlıkları</h4>
-          <span className="text-xs text-muted-foreground">Anlık değerler</span>
+          <h4 className="text-sm font-semibold text-foreground/80">{t("portfolio.investments")}</h4>
+          <span className="text-xs text-muted-foreground">{t("portfolio.liveValues")}</span>
         </div>
 
         <div className="space-y-2.5">

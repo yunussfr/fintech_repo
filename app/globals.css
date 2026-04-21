@@ -4,6 +4,54 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Light Mode - Clean and Professional */
+  --background: oklch(0.98 0.005 250);
+  --foreground: oklch(0.15 0.01 250);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0.01 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.01 250);
+  --primary: oklch(0.5 0.15 220);
+  --primary-foreground: oklch(0.98 0.005 250);
+  --secondary: oklch(0.95 0.005 250);
+  --secondary-foreground: oklch(0.15 0.01 250);
+  --muted: oklch(0.96 0.005 250);
+  --muted-foreground: oklch(0.45 0.02 250);
+  --accent: oklch(0.94 0.01 250);
+  --accent-foreground: oklch(0.15 0.01 250);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.98 0.01 0);
+  --border: oklch(0.88 0.01 250);
+  --input: oklch(0.96 0.005 250);
+  --ring: oklch(0.5 0.15 220);
+  /* Charts */
+  --chart-1: oklch(0.5 0.15 220);
+  --chart-2: oklch(0.55 0.22 25);
+  --chart-3: oklch(0.5 0.15 180);
+  --chart-4: oklch(0.55 0.12 280);
+  --chart-5: oklch(0.5 0.18 160);
+  --radius: 1rem;
+  --sidebar: oklch(0.98 0.005 250);
+  --sidebar-foreground: oklch(0.15 0.01 250);
+  --sidebar-primary: oklch(0.5 0.15 220);
+  --sidebar-primary-foreground: oklch(0.98 0.005 250);
+  --sidebar-accent: oklch(0.95 0.005 250);
+  --sidebar-accent-foreground: oklch(0.15 0.01 250);
+  --sidebar-border: oklch(0.88 0.01 250);
+  --sidebar-ring: oklch(0.5 0.15 220);
+  
+  /* Custom finance dashboard colors - Light Mode */
+  --glass: oklch(1 0 0 / 0.7);
+  --glass-border: oklch(0.85 0.01 250 / 0.3);
+  --metallic: oklch(0.3 0.02 250);
+  --neon-blue: oklch(0.5 0.15 220);
+  --neon-coral: oklch(0.55 0.22 25);
+  --titanium: oklch(0.45 0.02 250);
+  --platinum: oklch(0.25 0.01 250);
+  --midnight: oklch(0.92 0.005 250);
+}
+
+.dark {
   /* Deep Dark Mode - Anthracite, Midnight Blue, Titanium */
   --background: oklch(0.12 0.01 250);
   --foreground: oklch(0.92 0.01 250);
@@ -24,14 +72,11 @@
   --border: oklch(0.28 0.02 250);
   --input: oklch(0.2 0.015 250);
   --ring: oklch(0.6 0.15 220);
-  /* Neon Electric Blue for charts */
   --chart-1: oklch(0.7 0.2 220);
-  /* Neon Coral Red for warnings */
   --chart-2: oklch(0.7 0.22 25);
   --chart-3: oklch(0.6 0.15 180);
   --chart-4: oklch(0.75 0.12 280);
   --chart-5: oklch(0.65 0.18 160);
-  --radius: 1rem;
   --sidebar: oklch(0.14 0.012 250);
   --sidebar-foreground: oklch(0.92 0.01 250);
   --sidebar-primary: oklch(0.7 0.15 220);
@@ -41,7 +86,7 @@
   --sidebar-border: oklch(0.28 0.02 250);
   --sidebar-ring: oklch(0.6 0.15 220);
   
-  /* Custom finance dashboard colors */
+  /* Custom finance dashboard colors - Dark Mode */
   --glass: oklch(0.18 0.015 250 / 0.6);
   --glass-border: oklch(0.4 0.03 250 / 0.3);
   --metallic: oklch(0.75 0.02 250);
@@ -50,41 +95,6 @@
   --titanium: oklch(0.55 0.02 250);
   --platinum: oklch(0.8 0.01 250);
   --midnight: oklch(0.15 0.025 250);
-}
-
-.dark {
-  --background: oklch(0.12 0.01 250);
-  --foreground: oklch(0.92 0.01 250);
-  --card: oklch(0.16 0.015 250);
-  --card-foreground: oklch(0.92 0.01 250);
-  --popover: oklch(0.14 0.012 250);
-  --popover-foreground: oklch(0.92 0.01 250);
-  --primary: oklch(0.7 0.15 220);
-  --primary-foreground: oklch(0.12 0.01 250);
-  --secondary: oklch(0.22 0.015 250);
-  --secondary-foreground: oklch(0.85 0.01 250);
-  --muted: oklch(0.2 0.01 250);
-  --muted-foreground: oklch(0.6 0.02 250);
-  --accent: oklch(0.25 0.02 250);
-  --accent-foreground: oklch(0.92 0.01 250);
-  --destructive: oklch(0.65 0.22 25);
-  --destructive-foreground: oklch(0.98 0.01 0);
-  --border: oklch(0.28 0.02 250);
-  --input: oklch(0.2 0.015 250);
-  --ring: oklch(0.6 0.15 220);
-  --chart-1: oklch(0.7 0.2 220);
-  --chart-2: oklch(0.7 0.22 25);
-  --chart-3: oklch(0.6 0.15 180);
-  --chart-4: oklch(0.75 0.12 280);
-  --chart-5: oklch(0.65 0.18 160);
-  --sidebar: oklch(0.14 0.012 250);
-  --sidebar-foreground: oklch(0.92 0.01 250);
-  --sidebar-primary: oklch(0.7 0.15 220);
-  --sidebar-primary-foreground: oklch(0.12 0.01 250);
-  --sidebar-accent: oklch(0.22 0.015 250);
-  --sidebar-accent-foreground: oklch(0.92 0.01 250);
-  --sidebar-border: oklch(0.28 0.02 250);
-  --sidebar-ring: oklch(0.6 0.15 220);
 }
 
 @theme inline {

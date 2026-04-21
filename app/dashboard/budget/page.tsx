@@ -1,15 +1,26 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
   Target, Plus, TrendingUp, Wallet, PiggyBank, Home, Car,
-  Plane, GraduationCap, Heart, Gift, Sparkles, AlertCircle,
-  CheckCircle2, Clock, Edit2, Trash2, X
+  Plane, GraduationCap, Heart, Gift, AlertCircle,
+  CheckCircle2, Clock, Edit2, Trash2, X, Zap, ShoppingBag,
+  Utensils, Gamepad2, ArrowUpRight, ArrowDownLeft
 } from "lucide-react"
 import { GlassCard } from "@/components/dashboard/glass-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/hooks/useAuth"
+import {
+  addGoal,
+  getGoals,
+  deleteGoal,
+  addActivityLog,
+  getUserTransactions,
+  type Goal,
+  type Transaction,
+} from "@/lib/firestore"
 
 const goalIconOptions = [
   { id: "piggybank", icon: PiggyBank, label: "Birikim" },
@@ -28,41 +39,18 @@ const priorityOptions = [
   { value: "low",    label: "Düşük",   color: "text-muted-foreground bg-secondary" },
 ]
 
-const budgetCategories = [
-  { id: "housing",       name: "Konut",    icon: Home,          budget: 10000, spent: 8500,  color: "bg-blue-500" },
-  { id: "transport",     name: "Ulaşım",   icon: Car,           budget: 3000,  spent: 2100,  color: "bg-cyan-500" },
-  { id: "food",          name: "Yiyecek",  icon: Wallet,        budget: 4000,  spent: 4200,  color: "bg-orange-500" },
-  { id: "health",        name: "Sağlık",   icon: Heart,         budget: 2000,  spent: 800,   color: "bg-red-500" },
-  { id: "education",     name: "Eğitim",   icon: GraduationCap, budget: 2500,  spent: 1200,  color: "bg-green-500" },
-  { id: "entertainment", name: "Eğlence",  icon: Gift,          budget: 1500,  spent: 1800,  color: "bg-purple-500" },
-]
-
-const monthlyInsights = [
-  { month: "Ocak",    income: 53500, expense: 38000 },
-  { month: "Şubat",  income: 53500, expense: 42000 },
-  { month: "Mart",   income: 58500, expense: 35000 },
-  { month: "Nisan",  income: 53500, expense: 40000 },
-  { month: "Mayıs",  income: 55000, expense: 37000 },
-  { month: "Haziran",income: 53500, expense: 39000 },
-]
-
-interface Goal {
-  id: number
-  name: string
-  iconId: string
-  target: number
-  current: number
-  deadline: string
-  priority: string
-  monthlyContribution: number
+// Kategori renk ve ikon eşleştirmesi
+const CATEGORY_META: Record<string, { name: string; icon: React.ElementType; color: string }> = {
+  housing:       { name: "Konut",     icon: Home,          color: "bg-blue-500" },
+  transport:     { name: "Ulaşım",    icon: Car,           color: "bg-cyan-500" },
+  food:          { name: "Yiyecek",   icon: Utensils,      color: "bg-orange-500" },
+  health:        { name: "Sağlık",    icon: Heart,         color: "bg-red-500" },
+  education:     { name: "Eğitim",    icon: GraduationCap, color: "bg-green-500" },
+  entertainment: { name: "Eğlence",   icon: Gamepad2,      color: "bg-purple-500" },
+  shopping:      { name: "Alışveriş",  icon: ShoppingBag,   color: "bg-pink-500" },
+  bills:         { name: "Faturalar",  icon: Zap,           color: "bg-yellow-500" },
+  travel:        { name: "Seyahat",   icon: Plane,         color: "bg-sky-500" },
 }
-
-const initialGoals: Goal[] = [
-  { id: 1, name: "Acil Durum Fonu", iconId: "piggybank", target: 100000, current: 65000, deadline: "2024-12-31", priority: "high",   monthlyContribution: 5000  },
-  { id: 2, name: "Ev Peşinatı",     iconId: "home",      target: 500000, current: 125000, deadline: "2026-06-01", priority: "high",   monthlyContribution: 12000 },
-  { id: 3, name: "Yaz Tatili",      iconId: "plane",     target: 30000,  current: 22000, deadline: "2024-07-01", priority: "medium", monthlyContribution: 3000  },
-  { id: 4, name: "Yeni Araba",      iconId: "car",       target: 800000, current: 180000, deadline: "2027-01-01", priority: "low",    monthlyContribution: 15000 },
-]
 
 // Yeni hedef formu için başlangıç değerleri
 const emptyForm = {
@@ -76,39 +64,111 @@ const emptyForm = {
 }
 
 export default function BudgetPage() {
-  const [activeTab, setActiveTab]   = useState<"budget" | "goals">("budget")
-  const [goals, setGoals]           = useState<Goal[]>(initialGoals)
-  const [showModal, setShowModal]   = useState(false)
-  const [form, setForm]             = useState(emptyForm)
-  const [formError, setFormError]   = useState("")
+  const { user }                        = useAuth()
+  const [activeTab, setActiveTab]       = useState<"budget" | "goals">("budget")
+  const [goals, setGoals]               = useState<Goal[]>([])
+  const [loadingGoals, setLoadingGoals] = useState(true)
+  const [transactions,  setTxs]         = useState<Transaction[]>([])
+  const [loadingTxs,    setLoadingTxs]  = useState(true)
+  const [showModal, setShowModal]       = useState(false)
+  const [form, setForm]                 = useState(emptyForm)
+  const [formError, setFormError]       = useState("")
+  const [saving, setSaving]             = useState(false)
 
-  const totalBudget      = budgetCategories.reduce((s, c) => s + c.budget, 0)
-  const totalSpent       = budgetCategories.reduce((s, c) => s + c.spent, 0)
-  const overBudgetCount  = budgetCategories.filter(c => c.spent > c.budget).length
+  // Hedefleri yükle
+  useEffect(() => {
+    if (!user) return
+    setLoadingGoals(true)
+    getGoals(user.uid).then(({ goals: fetched, error }) => {
+      if (error) console.error("Hedefler yüklenemedi:", error)
+      else setGoals(fetched)
+      setLoadingGoals(false)
+    })
+  }, [user])
 
-  const handleAddGoal = () => {
+  // İşlemleri yükle (bütçe hesapları için)
+  useEffect(() => {
+    if (!user) return
+    setLoadingTxs(true)
+    getUserTransactions(user.uid, 200).then(({ transactions: fetched, error }) => {
+      if (error) console.error("İşlemler yüklenemedi:", error)
+      else setTxs(fetched)
+      setLoadingTxs(false)
+    })
+  }, [user])
+
+  // Harcama kategorileri Firestore verisiyle hesaplanır
+  const budgetCategories = useMemo(() => {
+    const expenses = transactions.filter(t => t.amount < 0)
+    return Object.entries(CATEGORY_META).map(([id, meta]) => ({
+      id, ...meta,
+      budget: 5000, // kullanıcı bütçe belirleyene kadar varsayılan
+      spent: Math.abs(expenses.filter(t => t.category === id).reduce((s, t) => s + t.amount, 0)),
+    }))
+  }, [transactions])
+
+  // Toplam bütçe ve harcama hesaplamaları
+  const totalBudget = useMemo(() => budgetCategories.reduce((sum, cat) => sum + cat.budget, 0), [budgetCategories])
+  const totalSpent = useMemo(() => budgetCategories.reduce((sum, cat) => sum + cat.spent, 0), [budgetCategories])
+  const overBudgetCount = useMemo(() => budgetCategories.filter(cat => cat.spent > cat.budget).length, [budgetCategories])
+
+  // Aylık özet (son 6 ay)
+  const monthlyInsights = useMemo(() => {
+    const months: Record<string, { month: string; income: number; expense: number }> = {}
+    transactions.forEach(t => {
+      const d     = t.date instanceof Date ? t.date : (t.date as any)?.toDate?.() ?? new Date()
+      const key   = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      const label = d.toLocaleDateString("tr-TR", { month: "long" })
+      if (!months[key]) months[key] = { month: label, income: 0, expense: 0 }
+      if (t.amount > 0) months[key].income  += t.amount
+      else              months[key].expense += Math.abs(t.amount)
+    })
+    return Object.entries(months)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-6)
+      .map(([, v]) => v)
+  }, [transactions])
+
+  const handleAddGoal = async () => {
     setFormError("")
-    if (!form.name.trim())    return setFormError("Hedef adı zorunludur.")
-    if (!form.target)         return setFormError("Hedef tutarı zorunludur.")
-    if (!form.deadline)       return setFormError("Son tarih zorunludur.")
+    if (!user)             return setFormError("Oturum bulunamadı.")
+    if (!form.name.trim()) return setFormError("Hedef adı zorunludur.")
+    if (!form.target)      return setFormError("Hedef tutarı zorunludur.")
+    if (!form.deadline)    return setFormError("Son tarih zorunludur.")
 
-    const newGoal: Goal = {
-      id:                  Date.now(),
+    setSaving(true)
+    const payload = {
       name:                form.name.trim(),
       iconId:              form.iconId,
       target:              Number(form.target),
       current:             Number(form.current) || 0,
       deadline:            form.deadline,
-      priority:            form.priority,
+      priority:            form.priority as Goal["priority"],
       monthlyContribution: Number(form.monthlyContribution) || 0,
     }
-    setGoals(prev => [newGoal, ...prev])
+
+    const { id, error } = await addGoal(user.uid, payload)
+    if (error || !id) {
+      setFormError("Kaydedilemedi: " + (error ?? "bilinmeyen hata"))
+      setSaving(false)
+      return
+    }
+
+    // Aktivite logu
+    await addActivityLog(user.uid, "goal_created", `Hedef: ${payload.name}`)
+
+    // UI'ya ekle (yeniden fetch yapmadan)
+    setGoals(prev => [{ ...payload, id, userId: user.uid }, ...prev])
     setForm(emptyForm)
     setShowModal(false)
+    setSaving(false)
   }
 
-  const handleDeleteGoal = (id: number) => {
-    setGoals(prev => prev.filter(g => g.id !== id))
+  const handleDeleteGoal = async (goalId: string) => {
+    if (!user) return
+    const { error } = await deleteGoal(goalId)
+    if (error) { console.error("Silinemedi:", error); return }
+    setGoals(prev => prev.filter(g => g.id !== goalId))
   }
 
   return (
@@ -264,10 +324,14 @@ export default function BudgetPage() {
               </Button>
               <Button
                 onClick={handleAddGoal}
-                className="bg-primary text-primary-foreground gap-2"
+                disabled={saving}
+                className="bg-primary text-primary-foreground gap-2 disabled:opacity-60"
               >
-                <Plus className="w-4 h-4" />
-                Hedef Ekle
+                {saving ? (
+                  <>⏳ Kaydediliyor...</>
+                ) : (
+                  <><Plus className="w-4 h-4" />Hedef Ekle</>
+                )}
               </Button>
             </div>
           </div>
@@ -328,15 +392,16 @@ export default function BudgetPage() {
         </GlassCard>
         <GlassCard className="p-4">
           <div className="flex items-center gap-3">
-            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", overBudgetCount > 0 ? "bg-red-500/20" : "bg-emerald-500/20")}>
-              {overBudgetCount > 0
-                ? <AlertCircle className="w-6 h-6 text-red-400" />
-                : <CheckCircle2 className="w-6 h-6 text-emerald-400" />}
+            <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+              <Target className="w-6 h-6 text-purple-400" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Bütçe Durumu</p>
-              <p className={cn("text-xl font-bold", overBudgetCount > 0 ? "text-red-400" : "text-emerald-400")}>
-                {overBudgetCount > 0 ? `${overBudgetCount} Aşım` : "İyi"}
+              <p className="text-sm text-muted-foreground">Aktif Hedefler</p>
+              <p className="text-xl font-bold">{goals.length}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {goals.length > 0 
+                  ? `Toplam: ${goals.reduce((s, g) => s + g.target, 0).toLocaleString("tr-TR")} ₺`
+                  : "Hedef ekleyin"}
               </p>
             </div>
           </div>
@@ -439,19 +504,57 @@ export default function BudgetPage() {
               </div>
             </GlassCard>
 
-            <GlassCard className="p-6 border-primary/30" glow>
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-5 h-5 text-primary" />
+            {/* Hedef Önerileri */}
+            {goals.length > 0 && (
+              <GlassCard className="p-6 border-primary/30" glow>
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                    <Target className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold mb-1">Hedef Önerileri</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Bütçenize göre hedeflerinize ulaşma planı
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold mb-1">AI Analiz</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Yiyecek ve eğlence kategorilerinde bütçe aşımı var. Bu ay 2.500₺ tasarruf etmek için bu alanlarda harcamaları azaltmanızı öneririm.
-                  </p>
+                <div className="space-y-3">
+                  {goals.slice(0, 3).map(goal => {
+                    const remaining = goal.target - goal.current
+                    const monthsLeft = Math.ceil((new Date(goal.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30))
+                    const neededPerMonth = monthsLeft > 0 ? remaining / monthsLeft : remaining
+                    const canAfford = (totalBudget - totalSpent) >= neededPerMonth
+
+                    return (
+                      <div key={goal.id} className="p-3 bg-secondary/30 rounded-xl">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-sm">{goal.name}</span>
+                          <span className={cn("text-xs font-semibold", canAfford ? "text-emerald-400" : "text-orange-400")}>
+                            {neededPerMonth.toLocaleString("tr-TR")} ₺/ay
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-secondary/50 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary rounded-full transition-all"
+                              style={{ width: `${Math.min((goal.current / goal.target) * 100, 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {Math.round((goal.current / goal.target) * 100)}%
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {canAfford 
+                            ? `✓ Mevcut bütçenizle ulaşabilirsiniz (${monthsLeft} ay)` 
+                            : `⚠ Aylık ${(neededPerMonth - (totalBudget - totalSpent)).toLocaleString("tr-TR")} ₺ daha tasarruf gerekli`}
+                        </p>
+                      </div>
+                    )
+                  })}
                 </div>
-              </div>
-            </GlassCard>
+              </GlassCard>
+            )}
           </div>
         </div>
       )}
@@ -459,7 +562,11 @@ export default function BudgetPage() {
       {/* ── BİRİKİM HEDEFLERİ ── */}
       {activeTab === "goals" && (
         <>
-          {goals.length === 0 ? (
+          {loadingGoals ? (
+            <GlassCard className="p-12 text-center">
+              <p className="text-muted-foreground text-sm animate-pulse">Hedefler yükleniyor...</p>
+            </GlassCard>
+          ) : goals.length === 0 ? (
             <GlassCard className="p-12 text-center">
               <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto mb-4">
                 <Target className="w-8 h-8 text-primary" />
@@ -512,7 +619,7 @@ export default function BudgetPage() {
                           variant="ghost"
                           size="icon"
                           className="w-8 h-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                          onClick={() => handleDeleteGoal(goal.id)}
+                         onClick={() => handleDeleteGoal(goal.id!)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>

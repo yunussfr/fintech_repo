@@ -63,6 +63,41 @@ service cloud.firestore {
         resource.data.userId == request.auth.uid;
     }
     
+    // Goals collection — kullanıcının birikim hedefleri
+    match /goals/{goalId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+    }
+
+    // Assets collection — banka hesapları, nakit, gayrimenkul vb.
+    match /assets/{assetId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+    }
+
+    // Activity Logs — sadece oluşturma ve okuma, güncelleme/silme YOK
+    match /activityLogs/{logId} {
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      // update ve delete kasıtlı olarak tanımlanmadı → erişim reddedilir
+    }
+
     // AI Chat History (opsiyonel)
     match /chatHistory/{chatId} {
       allow read, write: if isAuthenticated() && 

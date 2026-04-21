@@ -14,6 +14,8 @@ import { GlassCard } from "@/components/dashboard/glass-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/lib/i18n/LanguageContext"
+import type { Language } from "@/lib/i18n/translations"
 
 const settingsSections = [
   { id: "profile",       name: "Profil",           icon: User },
@@ -68,6 +70,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void 
 export default function SettingsPage() {
   const { user } = useAuth()
   const { theme, setTheme } = useTheme()
+  const { language, setLanguage, t } = useLanguage()
 
   const [activeSection, setActiveSection] = useState("profile")
 
@@ -91,6 +94,15 @@ export default function SettingsPage() {
   })
 
   const isDark = theme === "dark"
+
+  // Dark mode toggle - system theme'i de kontrol et
+  const toggleDarkMode = () => {
+    if (theme === "dark") {
+      setTheme("light")
+    } else {
+      setTheme("dark")
+    }
+  }
 
   // Profil Kaydet
   const handleSaveProfile = async () => {
@@ -432,29 +444,42 @@ export default function SettingsPage() {
                   <div className="flex items-center gap-3">
                     {isDark ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                     <div>
-                      <p className="font-medium">Karanlık Mod</p>
+                      <p className="font-medium">{t("settings.darkMode")}</p>
                       <p className="text-xs text-muted-foreground">
-                        {isDark ? "Karanlık tema aktif" : "Aydınlık tema aktif"}
+                        {isDark ? t("settings.darkOn") : t("settings.darkOff")}
                       </p>
                     </div>
                   </div>
                   <Toggle
                     checked={isDark}
-                    onChange={() => setTheme(isDark ? "light" : "dark")}
+                    onChange={toggleDarkMode}
                   />
                 </div>
               </GlassCard>
 
               <GlassCard className="p-6">
-                <h2 className="text-lg font-semibold mb-6">Dil ve Bölge</h2>
+                <h2 className="text-lg font-semibold mb-6">{t("settings.language")} & Bölge</h2>
                 <div className="space-y-4">
+                  {/* Dil Seçici — Gerçekten Çalışıyor */}
                   <div>
-                    <label className="text-sm text-muted-foreground mb-2 block">Dil</label>
-                    <select className="w-full p-3 bg-secondary/50 border border-border/50 rounded-xl">
-                      <option>Türkçe</option>
-                      <option>English</option>
-                      <option>Deutsch</option>
-                    </select>
+                    <label className="text-sm text-muted-foreground mb-2 block">{t("settings.language")}</label>
+                    <div className="flex gap-2">
+                      {(["tr", "en"] as Language[]).map((lang) => (
+                        <button
+                          key={lang}
+                          onClick={() => setLanguage(lang)}
+                          className={cn(
+                            "flex-1 py-3 px-4 rounded-xl text-sm font-semibold border-2 transition-all",
+                            language === lang
+                              ? "bg-primary/20 border-primary text-primary"
+                              : "bg-secondary/30 border-transparent hover:bg-secondary/50 text-muted-foreground"
+                          )}
+                        >
+                          {lang === "tr" ? "🇹🇷 Türkçe" : "🇬🇧 English"}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">Seçilen dil menülere ve grafiklere anında yansır.</p>
                   </div>
                   <div>
                     <label className="text-sm text-muted-foreground mb-2 block">Para Birimi</label>
